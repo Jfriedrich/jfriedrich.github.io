@@ -6,19 +6,28 @@ function Bubble(data, options) {
 	  this.options = options
   else
     this.options = {
-			radiusForPercentage:200000,  // bubble size
+			radiusMin:20000,  // bubble size
+      radiusMed:70000,
+      radiusMax:80000,
 			text:{
 				visible:false,
 				minimumZoom:13,
 				maximumZoom:15
 			},
 			bubble:{
-        fill:{opacity:0.7},
-				stroke:{weight:1, opacity:0.5}
+        fill:{opacity:0.9},
+				stroke:{weight:1, opacity:0.2}
 			}
     };
 
-  this.totalSize = this.getTotalSize(this.data);
+  // this.totalSize = this.getTotalSize(this.data);
+  this.minSize = this.getMinMaxSize(this.data).minSize;
+  this.maxSize = this.getMinMaxSize(this.data).maxSize;
+  this.threshold = 1500;
+  this.stepSize = {
+      sm:(this.options.radiusMed-this.options.radiusMin)/(this.threshold-this.minSize),
+      lg:(this.options.radiusMax-this.options.radiusMed)/(this.maxSize-this.threshold)
+  };
 }
 
 Bubble.prototype = new google.maps.OverlayView;
@@ -52,18 +61,25 @@ Bubble.prototype.draw = function() {
 			this.drawText(this.data, this.options, row);
 }
 
-// Get the total size of capacity. Normalization
-Bubble.prototype.getTotalSize = function(data) {
-    var totalSize = 0;
-	  for (var row = 0; row < data.getNumberOfRows(); row++)
-      totalSize += data.getValue(row, 2);
-    return totalSize;
+Bubble.prototype.getMinMaxSize = function(data) {
+    var minSize = 99999999;
+    var maxSize = 0;
+    for (var row = 0; row < data.getNumberOfRows(); row++) {
+        if (data.getValue(row, 2) < minSize) {minSize = data.getValue(row, 2)};
+        if (data.getValue(row, 2) > maxSize) {maxSize = data.getValue(row, 2)};
+    }
+    return {minSize: minSize, maxSize: maxSize};
 }
 
 Bubble.prototype.drawBubble = function(data, options, row) {
     var sizeOfLocation = data.getValue(row, 2);
-    var percentageOfTotal = (sizeOfLocation / this.totalSize) * 100;
-    var radiusForLocation = options.radiusForPercentage * percentageOfTotal;
+    if (sizeOfLocation <= this.threshold) {
+        var stepAdded = (sizeOfLocation - this.minSize) * this.stepSize.sm;
+        var radiusForLocation = stepAdded + options.radiusMin;
+      } else {
+        var stepAdded = (sizeOfLocation - this.threshold) * this.stepSize.lg;
+        var radiusForLocation = stepAdded + options.radiusMed;
+      }
     var color = this.colorPalette()[data.getValue(row,1)];
     var marker = new google.maps.Circle({
         center: new google.maps.LatLng(data.getValue(row, 3), data.getValue(row, 4)),

@@ -1,0 +1,106 @@
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Power Watch Data</title>
+
+    <!-- Style sheet -->
+    <link href="https://google-developers.appspot.com/maps/documentation/javascript/examples/default.css" rel="stylesheet">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCyji1a4snTdXPg4yF-fxw8G79gUfHKO6E" type="text/javascript"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <script src="dataPoints.js"></script>
+    <script type="text/javascript" src="bubbleMap.js"></script>
+
+    <script type="text/javascript">
+      google.charts.load("current", {packages:["map"]});
+      google.charts.setOnLoadCallback(drawMap);
+      var onlyInfoWindow;
+
+      function drawMap() {
+        // var gdata = google.visualization.arrayToDataTable(eia_860)
+        var data = new google.visualization.DataTable();
+        // Add columns
+        data.addColumn('string', 'Plant Name');
+        data.addColumn('string', 'Fuel');
+        data.addColumn('number', 'Capacity');
+        data.addColumn('number', 'Latitude');
+        data.addColumn('number', 'Longitude');
+
+        // alert (dataPoints.length)
+        // Add rows
+        for (var i = 1; i < dataPoints.length; i++){
+          row = dataPoints[i];
+          // if (i < 10){alert(row)}
+          data.addRow([
+            row[0], row[1], parseFloat(row[2]), parseFloat(row[3]), parseFloat(row[4])
+          ]);
+        };
+
+        var myLatlng = new google.maps.LatLng(38,-96);
+        var mapOptions = {
+          zoom: 3,
+          center: myLatlng,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+        };
+        var map = new google.maps.Map(document.getElementById('map_canvas'), mapOptions);
+
+        // Add bubble map
+        var bubbleMap = new Bubble(data);
+        bubbleMap.setMap(map);
+        var mapStyles = [{
+                          featureType: "all",
+                          stylers: [
+                              {saturation: -100}
+                          ]
+                        }
+                      ];
+        map.setOptions({styles: mapStyles});
+
+        // Overlay an image map type
+        var bounds = {
+          17: [[20969, 20970], [50657, 50658]],
+          18: [[41939, 41940], [101315, 101317]],
+          19: [[83878, 83881], [202631, 202634]],
+          20: [[167757, 167763], [405263, 405269]]
+        };
+
+        var CustomTileLayer = new google.maps.ImageMapType({
+          getTileUrl: function(coord, zoom) {
+            if (zoom < 17 || zoom > 20 ||
+                      bounds[zoom][0][0] > coord.x || coord.x > bounds[zoom][0][1] ||
+                      bounds[zoom][1][0] > coord.y || coord.y > bounds[zoom][1][1]) {
+                      return null;
+                  }
+            return "http://tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
+          },
+          tileSize: new google.maps.Size(256, 256),
+          isPng: true
+        });
+
+        map.overlayMapTypes.push(CustomTileLayer);
+
+        var legend = document.getElementById('legend');
+        var colors = bubbleMap.colorPalette()
+        for (var key in colors){
+          var type = key;
+          var color = colors[key];
+          var div = document.createElement('div');
+          div.style['margin'] = '5px';
+          div.innerHTML = '<span style="background-color:' + color + ';opacity:0.7">' + '&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</span>' + '&nbsp&nbsp&nbsp' + type;
+          legend.appendChild(div);
+        }
+
+        map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(legend);
+      }
+
+    </script>
+
+  </head>
+
+  <body>
+    <div id="map_canvas"></div>
+    <div id="legend"><h3>Legend</h3></div>
+  </body>
+</html>
